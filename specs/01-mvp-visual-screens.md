@@ -1,6 +1,6 @@
 # SPEC 01 — MVP visual de Arcade Vault: todas las pantallas
 
-> **Estado:** Aprobado · **Depende de:** — · **Fecha:** 2026-05-11
+> **Estado:** Implementado · **Depende de:** — · **Fecha:** 2026-05-11
 > **Objetivo:** Implementar las 5 pantallas visuales de Arcade Vault en Next.js App Router
 > con la estética retro-arcade del prototipo HTML de referencia, sin lógica de juego real.
 
