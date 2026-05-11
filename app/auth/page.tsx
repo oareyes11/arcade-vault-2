@@ -25,9 +25,6 @@ export default function Auth() {
 
   return (
     <div className="av-auth-wrap fade-in">
-      <div className="av-bg" />
-      <div className="av-noise" />
-
       <div className="auth-card">
         <div className="auth-header">
           <div className="mark" />

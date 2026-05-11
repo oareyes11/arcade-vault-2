@@ -42,9 +42,6 @@ export default function GamePlayer({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="av-player fade-in">
-      <div className="av-bg" />
-      <div className="av-noise" />
-
       <div className="player-hud">
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <div className="hud-stat">

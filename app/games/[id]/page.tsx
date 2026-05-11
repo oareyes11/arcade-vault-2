@@ -14,9 +14,6 @@ export default function GameDetail({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="av-detail fade-in">
-      <div className="av-bg" />
-      <div className="av-noise" />
-
       <div>
         <div className="detail-cover">
           <div className={`cover-bg ${game.cover}`} />

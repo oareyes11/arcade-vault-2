@@ -68,9 +68,6 @@ export default function Biblioteca() {
 
   return (
     <div className="fade-in">
-      <div className="av-bg" />
-      <div className="av-noise" />
-
       <section className="av-hero">
         <h1 className="flicker">ARCADE VAULT</h1>
         <div className="sub">
