@@ -1,8 +1,7 @@
-'use client';
-
 import Link from 'next/link';
-import { useEffect } from 'react';
-import { GAMES } from '@/app/data';
+import { createClient } from '@/lib/supabase/server';
+import type { GameRow } from '@/lib/supabase/types';
+import RevealObserver from './RevealObserver';
 
 const SCORES = [
   { p: 'NEONFOX', g: 'Caída', s: 184220, t: 'hace 2 min', c: 'magenta' },
@@ -202,7 +201,7 @@ function FeatureIcon({ kind }: { kind: string }) {
   return null;
 }
 
-function MiniCard({ game }: { game: (typeof GAMES)[0] }) {
+function MiniCard({ game }: { game: GameRow }) {
   return (
     <Link href={`/games/${game.id}`} className="mini-card">
       <div className="mini-cover">
@@ -216,26 +215,18 @@ function MiniCard({ game }: { game: (typeof GAMES)[0] }) {
   );
 }
 
-export default function HomePage() {
-  useEffect(() => {
-    const els = document.querySelectorAll('.reveal');
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add('in');
-            io.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.12 },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('games')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(6);
+  const games = (data as GameRow[]) ?? [];
 
   return (
     <div className="home fade-in">
+      <RevealObserver />
       {/* ── HERO ── */}
       <section className="home-hero">
         <FloatingSilhouettes />
@@ -323,7 +314,7 @@ export default function HomePage() {
           <div className="section-rule" />
         </div>
         <div className="mini-rail">
-          {GAMES.slice(0, 6).map((g) => (
+          {games.map((g) => (
             <MiniCard key={g.id} game={g} />
           ))}
         </div>
