@@ -259,7 +259,6 @@ export default function ArkanoidGame({
 
     function playBounce() {
       try {
-        bounceSound.cloneNode().dispatchEvent;
         (bounceSound.cloneNode() as HTMLAudioElement).play().catch(() => {});
       } catch {}
     }
@@ -490,8 +489,13 @@ export default function ArkanoidGame({
     canvas.addEventListener('mousemove', onMouseMove);
 
     // ── Start ─────────────────────────────────────────────────────────────────
+    // Guard against React Strict Mode double-mount: if the effect is cleaned up
+    // before the async image load completes, do not start the loop.
+    let cleaned = false;
+
     const rawImg = new Image();
     rawImg.onload = () => {
+      if (cleaned) return;
       const oc = document.createElement('canvas');
       oc.width = rawImg.width;
       oc.height = rawImg.height;
@@ -506,6 +510,7 @@ export default function ArkanoidGame({
     rawImg.src = '/spritesheet-breakout.png';
 
     return () => {
+      cleaned = true;
       cancelAnimationFrame(rafId);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
