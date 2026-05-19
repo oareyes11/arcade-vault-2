@@ -210,6 +210,9 @@ export default function TetrisPlay() {
               <button className="btn" onClick={restart}>
                 JUGAR DE NUEVO
               </button>
+              <Link href="/games/tetris#leaderboard" className="btn cyan">
+                VER LEADERBOARD
+              </Link>
               <Link href="/games" className="btn magenta">
                 VOLVER AL VAULT
               </Link>

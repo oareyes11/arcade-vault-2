@@ -163,6 +163,9 @@ export default function ArkanoidPlay() {
               <button className="btn" onClick={restart}>
                 JUGAR DE NUEVO
               </button>
+              <Link href="/games/arkanoid#leaderboard" className="btn cyan">
+                VER LEADERBOARD
+              </Link>
               <Link href="/games" className="btn magenta">
                 VOLVER AL VAULT
               </Link>
