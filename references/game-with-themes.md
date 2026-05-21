@@ -8,7 +8,7 @@
 | --------- | ------- | ----- | ---- | ----------- | ------------------ | -------------------- |
 | tetris    | —       | ✅    | ✅   | pastel      | parcial            | —                    |
 | arkanoid  | —       | —     | —    | —           | —                  | —                    |
-| asteroids | —       | —     | —    | —           | —                  | —                    |
+| asteroids | ✅      | ✅    | ✅   | —           | sí                 | 2026-05-21           |
 | snake     | —       | —     | —    | —           | —                  | —                    |
 
 Leyenda: `✅` aplicado y verificado · `🟡` en progreso · `—` pendiente
