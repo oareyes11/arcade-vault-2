@@ -9,6 +9,17 @@ const SnakeGame = dynamic(() => import('@/components/games/SnakeGame'), {
   ssr: false,
 });
 
+const SKIN_OPTIONS = [
+  { key: 'classic', label: 'Classic' },
+  { key: 'retro', label: 'Retro' },
+  { key: 'neon', label: 'Neon' },
+];
+
+function getSavedSkin() {
+  if (typeof window === 'undefined') return 'classic';
+  return localStorage.getItem('snake-skin') ?? 'classic';
+}
+
 export default function SnakePlay() {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -18,6 +29,16 @@ export default function SnakePlay() {
   const [name, setName] = useState('INVITADO');
   const [saved, setSaved] = useState(false);
   const [gameKey, setGameKey] = useState(0);
+  const [skinKey, setSkinKey] = useState('classic');
+
+  useEffect(() => {
+    setSkinKey(getSavedSkin());
+  }, []);
+
+  function changeSkin(key: string) {
+    setSkinKey(key);
+    localStorage.setItem('snake-skin', key);
+  }
 
   const handleScoreChange = useCallback((s: number) => setScore(s), []);
   const handleLevelChange = useCallback((l: number) => setLevel(l), []);
@@ -67,6 +88,30 @@ export default function SnakePlay() {
             <div className="l">Nivel</div>
             <div className="v">{String(level).padStart(2, '0')}</div>
           </div>
+          <div className="hud-stat">
+            <div className="l">Skin</div>
+            <div className="v">
+              <select
+                value={skinKey}
+                onChange={(e) => changeSkin(e.target.value)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--ink-dim)',
+                  color: 'var(--ink)',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  cursor: 'pointer',
+                  padding: '2px 4px',
+                }}
+              >
+                {SKIN_OPTIONS.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
         <div className="hud-actions">
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
@@ -86,6 +131,7 @@ export default function SnakePlay() {
           <SnakeGame
             key={gameKey}
             paused={paused}
+            skinKey={skinKey}
             onScoreChange={handleScoreChange}
             onLevelChange={handleLevelChange}
             onLivesChange={handleLivesChange}
