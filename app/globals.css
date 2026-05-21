@@ -299,6 +299,17 @@ a {
   .av-mobile-backdrop.nav-hide-mobile {
     display: none !important;
   }
+
+  /* Tetris is portrait (432×600); scale down to fit mobile screen */
+  .tetris-game-wrapper {
+    zoom: 0.58;
+  }
+
+  /* Scale canvas to fill crt-screen on mobile (Asteroids, Arkanoid, Snake) */
+  .crt-screen--scale-canvas canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
 }
 
 @media (max-width: 840px) {
@@ -1257,8 +1268,19 @@ a {
 }
 .modal .input-row {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 22px 0 12px;
+}
+.modal .input-row input,
+.modal .input-row .btn {
+  width: 100%;
+}
+@media (max-width: 767px) {
+  .modal .input-row input {
+    height: 52px;
+    text-align: center;
+  }
 }
 .modal .input-row input {
   flex: 1;

@@ -142,16 +142,18 @@ export default function TetrisPlay() {
       </div>
 
       <div className="crt w-full max-w-[800px]">
-        <div className="crt-screen">
-          <TetrisGame
-            key={gameKey}
-            paused={paused}
-            skinKey={skinKey}
-            onScoreChange={handleScoreChange}
-            onLivesChange={handleLivesChange}
-            onLevelChange={handleLevelChange}
-            onGameOver={handleGameOver}
-          />
+        <div className="crt-screen" style={{ aspectRatio: 'auto' }}>
+          <div className="tetris-game-wrapper">
+            <TetrisGame
+              key={gameKey}
+              paused={paused}
+              skinKey={skinKey}
+              onScoreChange={handleScoreChange}
+              onLivesChange={handleLivesChange}
+              onLevelChange={handleLevelChange}
+              onGameOver={handleGameOver}
+            />
+          </div>
           {paused && (
             <div
               className="crt-content"

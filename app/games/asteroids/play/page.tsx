@@ -144,7 +144,7 @@ export default function AsteroidsPlay() {
       </div>
 
       <div className="crt w-full max-w-[800px]">
-        <div className="crt-screen">
+        <div className="crt-screen crt-screen--scale-canvas">
           <AsteroidsGame
             key={gameKey}
             paused={paused}

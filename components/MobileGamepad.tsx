@@ -54,42 +54,26 @@ function GamepadButton({
   label,
   keyValue,
   hold = false,
-  repeat = false,
-  repeatMs = 80,
+  pulse = false,
   style,
   disabled = false,
 }: {
   label: string;
   keyValue?: string;
   hold?: boolean;
-  repeat?: boolean;
-  repeatMs?: number;
+  pulse?: boolean; // fire exactly once per touch (keydown+keyup), no repeat on hold
   style?: React.CSSProperties;
   disabled?: boolean;
 }) {
   const isDisabled = disabled || !keyValue;
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopRepeat = () => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  const firePulse = (key: string) => {
-    // Send keydown+keyup pair so justPressed-based games reset between pulses
-    dispatchKey(key, 'keydown');
-    dispatchKey(key, 'keyup');
-  };
 
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!keyValue) return;
-    if (repeat) {
-      stopRepeat();
-      firePulse(keyValue);
-      intervalRef.current = setInterval(() => firePulse(keyValue), repeatMs);
+    if (pulse) {
+      // One shot: keydown + keyup immediately, ignores hold duration
+      dispatchKey(keyValue, 'keydown');
+      dispatchKey(keyValue, 'keyup');
     } else {
       dispatchKey(keyValue, 'keydown');
     }
@@ -97,8 +81,7 @@ function GamepadButton({
 
   const handleEnd = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!keyValue) return;
-    if (repeat) stopRepeat();
+    if (!keyValue || pulse) return;
     if (hold) dispatchKey(keyValue, 'keyup');
   };
 
@@ -217,7 +200,7 @@ export default function MobileGamepad({
           <GamepadButton
             label="B"
             keyValue={keyMap.b}
-            repeat
+            pulse
             style={{
               width: actionSize,
               height: actionSize,
@@ -232,7 +215,7 @@ export default function MobileGamepad({
           <GamepadButton
             label="A"
             keyValue={keyMap.a}
-            repeat
+            pulse
             style={{
               width: actionSize,
               height: actionSize,
