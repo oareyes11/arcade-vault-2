@@ -141,7 +141,7 @@ export default function TetrisPlay() {
         </div>
       </div>
 
-      <div className="crt w-full max-w-[800px]">
+      <div className="crt w-full max-w-[800px] mx-auto">
         <div className="crt-screen" style={{ aspectRatio: 'auto' }}>
           <div className="tetris-game-wrapper">
             <TetrisGame

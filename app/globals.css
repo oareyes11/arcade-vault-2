@@ -1284,8 +1284,10 @@ a {
 }
 .modal .input-row input {
   flex: 1;
-  height: 44px;
-  padding: 0 12px;
+  height: 56px;
+  padding: 0 16px;
+  font-size: 14px;
+  text-align: center;
   background: var(--bg);
   border: 1px solid var(--line);
   outline: 0;

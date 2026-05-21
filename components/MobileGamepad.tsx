@@ -131,10 +131,8 @@ export default function MobileGamepad({
 
   return (
     <div
-      className="md:hidden"
+      className="md:hidden flex flex-col"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
         gap: 10,
         padding: '20px 12px 14px',
         userSelect: 'none',
