@@ -191,6 +191,7 @@ export default function AsteroidsPlay() {
         onPauseToggle={() => setPaused((p) => !p)}
         skin={skinKey}
         onSkinChange={changeSkin}
+        backHref="/games/asteroids"
       />
 
       {over && (

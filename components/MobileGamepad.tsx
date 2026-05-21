@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import Link from 'next/link';
 
 interface KeyMap {
   up?: string;
@@ -17,6 +18,7 @@ interface MobileGamepadProps {
   onPauseToggle: () => void;
   skin: string;
   onSkinChange: (skin: string) => void;
+  backHref: string;
 }
 
 const SKIN_OPTIONS = [
@@ -75,16 +77,21 @@ function GamepadButton({
     }
   };
 
+  const firePulse = (key: string) => {
+    // Send keydown+keyup pair so justPressed-based games reset between pulses
+    dispatchKey(key, 'keydown');
+    dispatchKey(key, 'keyup');
+  };
+
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!keyValue) return;
-    dispatchKey(keyValue, 'keydown');
     if (repeat) {
       stopRepeat();
-      intervalRef.current = setInterval(
-        () => dispatchKey(keyValue, 'keydown'),
-        repeatMs,
-      );
+      firePulse(keyValue);
+      intervalRef.current = setInterval(() => firePulse(keyValue), repeatMs);
+    } else {
+      dispatchKey(keyValue, 'keydown');
     }
   };
 
@@ -134,6 +141,7 @@ export default function MobileGamepad({
   onPauseToggle,
   skin,
   onSkinChange,
+  backHref,
 }: MobileGamepadProps) {
   const btnSize = 52;
   const actionSize = 56;
@@ -145,7 +153,7 @@ export default function MobileGamepad({
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        padding: '10px 12px 14px',
+        padding: '20px 12px 14px',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',
@@ -289,6 +297,29 @@ export default function MobileGamepad({
             </option>
           ))}
         </select>
+
+        <Link
+          href={backHref}
+          style={{
+            height: 36,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 8,
+            color: 'rgba(255,255,255,0.7)',
+            fontFamily: 'inherit',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textDecoration: 'none',
+            padding: '0 12px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ← SALIR
+        </Link>
       </div>
     </div>
   );

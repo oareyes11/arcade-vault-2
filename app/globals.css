@@ -293,6 +293,14 @@ a {
   display: none;
 }
 
+@media (max-width: 767px) {
+  .av-nav.nav-hide-mobile,
+  .av-mobile-panel.nav-hide-mobile,
+  .av-mobile-backdrop.nav-hide-mobile {
+    display: none !important;
+  }
+}
+
 @media (max-width: 840px) {
   .av-nav {
     padding: 12px 16px;
