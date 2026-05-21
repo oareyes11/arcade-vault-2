@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState, useCallback, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import MobileGamepad from '@/components/MobileGamepad';
 
 const ArkanoidGame = dynamic(() => import('@/components/games/ArkanoidGame'), {
   ssr: false,
@@ -66,70 +67,74 @@ export default function ArkanoidPlay() {
     setGameKey((k) => k + 1);
   }
 
+  const keyMap = { left: 'ArrowLeft', right: 'ArrowRight', a: ' ' };
+
   return (
     <div className="av-player fade-in">
-      <div className="player-hud">
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <div className="hud-stat">
-            <div className="l">Jugador</div>
-            <div className="v" style={{ color: 'var(--ink)' }}>
-              {name}
+      <div className="hidden md:block">
+        <div className="player-hud">
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            <div className="hud-stat">
+              <div className="l">Jugador</div>
+              <div className="v" style={{ color: 'var(--ink)' }}>
+                {name}
+              </div>
+            </div>
+            <div className="hud-stat">
+              <div className="l">Puntuación</div>
+              <div className="v">{score.toLocaleString('es-ES')}</div>
+            </div>
+            <div className="hud-stat lives">
+              <div className="l">Vidas</div>
+              <div className="v">
+                {'♥ '.repeat(Math.max(0, lives)).trim() || '—'}
+              </div>
+            </div>
+            <div className="hud-stat level">
+              <div className="l">Nivel</div>
+              <div className="v">{String(level).padStart(2, '0')}</div>
+            </div>
+            <div className="hud-stat">
+              <div className="l">Skin</div>
+              <div className="v">
+                <select
+                  value={skinKey}
+                  onChange={(e) => changeSkin(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--ink-dim)',
+                    color: 'var(--ink)',
+                    fontFamily: 'inherit',
+                    fontSize: 'inherit',
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                  }}
+                >
+                  {SKIN_OPTIONS.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-          <div className="hud-stat">
-            <div className="l">Puntuación</div>
-            <div className="v">{score.toLocaleString('es-ES')}</div>
+          <div className="hud-actions">
+            <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
+              {paused ? 'REANUDAR' : 'PAUSA'}
+            </button>
+            <button className="btn magenta" onClick={() => setOver(true)}>
+              FIN
+            </button>
+            <Link href="/games/arkanoid" className="btn ghost">
+              SALIR
+            </Link>
           </div>
-          <div className="hud-stat lives">
-            <div className="l">Vidas</div>
-            <div className="v">
-              {'♥ '.repeat(Math.max(0, lives)).trim() || '—'}
-            </div>
-          </div>
-          <div className="hud-stat level">
-            <div className="l">Nivel</div>
-            <div className="v">{String(level).padStart(2, '0')}</div>
-          </div>
-          <div className="hud-stat">
-            <div className="l">Skin</div>
-            <div className="v">
-              <select
-                value={skinKey}
-                onChange={(e) => changeSkin(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--ink-dim)',
-                  color: 'var(--ink)',
-                  fontFamily: 'inherit',
-                  fontSize: 'inherit',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                }}
-              >
-                {SKIN_OPTIONS.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="hud-actions">
-          <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
-            {paused ? 'REANUDAR' : 'PAUSA'}
-          </button>
-          <button className="btn magenta" onClick={() => setOver(true)}>
-            FIN
-          </button>
-          <Link href="/games/arkanoid" className="btn ghost">
-            SALIR
-          </Link>
         </div>
       </div>
 
-      <div className="crt">
-        <div className="crt-screen">
+      <div className="crt w-full max-w-[800px]">
+        <div className="crt-screen crt-screen--scale-canvas">
           <ArkanoidGame
             key={gameKey}
             paused={paused}
@@ -169,6 +174,15 @@ export default function ArkanoidPlay() {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+
+      <MobileGamepad
+        keyMap={keyMap}
+        paused={paused}
+        onPauseToggle={() => setPaused((p) => !p)}
+        skin={skinKey}
+        onSkinChange={changeSkin}
+        backHref="/games/arkanoid"
+      />
 
       {over && (
         <div className="modal-bd">
