@@ -133,7 +133,7 @@ export default function ArkanoidPlay() {
         </div>
       </div>
 
-      <div className="crt w-full max-w-[800px]">
+      <div className="crt w-full max-w-[800px] mx-auto">
         <div className="crt-screen crt-screen--scale-canvas">
           <ArkanoidGame
             key={gameKey}

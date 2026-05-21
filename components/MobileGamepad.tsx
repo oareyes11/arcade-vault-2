@@ -65,7 +65,7 @@ function DPadButton({
   keyValue?: string;
 }) {
   const [active, setActive] = useState(false);
-  const size = 52;
+  const size = 44;
 
   const handleStart = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -171,8 +171,8 @@ function ActionButton({
   return (
     <button
       style={{
-        width: 74,
-        height: 74,
+        width: 58,
+        height: 58,
         borderRadius: '50%',
         border: `2px solid ${color}`,
         background: `radial-gradient(circle at 32% 26%, rgba(255,255,255,0.25), transparent 50%), radial-gradient(circle at 50% 55%, ${abMid}, ${abDeep} 75%)`,
@@ -201,7 +201,7 @@ function ActionButton({
       <span
         style={{
           fontFamily: "'Press Start 2P', monospace",
-          fontSize: 22,
+          fontSize: 16,
           color: '#fff',
           letterSpacing: '0.02em',
           textShadow: `0 0 8px ${color}, 0 0 18px ${color}, 0 1px 0 rgba(0,0,0,0.6)`,
@@ -221,20 +221,25 @@ export default function MobileGamepad({
   onSkinChange,
   backHref,
 }: MobileGamepadProps) {
-  const btnSize = 52;
+  const btnSize = 44;
 
   return (
-    /* Step 2 — .gp neon container */
+    /* .gp neon container */
     <div
       className="md:hidden"
       style={{
         position: 'relative',
+        width: '100%',
+        boxSizing: 'border-box',
+        marginTop: 18,
+        borderTop: '1px solid rgba(0,245,255,0.2)',
         background: 'linear-gradient(180deg, #1c1c28 0%, #0c0c14 100%)',
         border: '1px solid rgba(0,245,255,0.18)',
         borderRadius: 22,
         boxShadow: `
+          0 0 0 6px #1b1b22,
+          0 0 0 7px #2a2a35,
           0 30px 80px -30px rgba(0,245,255,0.4),
-          0 0 0 1px rgba(255,255,255,0.02),
           inset 0 1px 0 rgba(255,255,255,0.06),
           inset 0 -2px 0 rgba(0,0,0,0.6)
         `,
@@ -343,8 +348,15 @@ export default function MobileGamepad({
           </div>
         </div>
 
-        {/* Step 5 — Fila inferior: PAUSA, skin, SALIR */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {/* Fila inferior: PAUSA, skin, SALIR */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            marginTop: 14,
+          }}
+        >
           <button
             style={{
               flex: 1,
@@ -415,7 +427,7 @@ export default function MobileGamepad({
               whiteSpace: 'nowrap',
             }}
           >
-            ← SALIR
+            SALIR
           </Link>
         </div>
       </div>
