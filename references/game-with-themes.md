@@ -7,8 +7,8 @@
 | Juego     | classic | retro | neon | Skins extra | Dark-mode revisado | Última actualización |
 | --------- | ------- | ----- | ---- | ----------- | ------------------ | -------------------- |
 | tetris    | —       | ✅    | ✅   | pastel      | parcial            | —                    |
-| arkanoid  | —       | —     | —    | —           | —                  | —                    |
+| arkanoid  | ✅      | ✅    | ✅   | —           | sí                 | 2026-05-21           |
 | asteroids | ✅      | ✅    | ✅   | —           | sí                 | 2026-05-21           |
-| snake     | —       | —     | —    | —           | —                  | —                    |
+| snake     | ✅      | ✅    | ✅   | —           | sí                 | 2026-05-21           |
 
 Leyenda: `✅` aplicado y verificado · `🟡` en progreso · `—` pendiente

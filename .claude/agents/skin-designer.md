@@ -40,6 +40,8 @@ Eres el diseñador de skins de Arcade Vault. Aplicas los 3 skins canónicos (`cl
 
 9. **No introducir selector global ni persistencia** (localStorage, Supabase, contexto React, Nav). Solo el sistema de skins dentro del componente del juego — el cableado del selector lo hará el usuario cuando quiera.
 
+10. **Ocupamos asegurarnos** de que tenga un selector de temas similares a como está el juego de Arkanoid, Tetris o Asteroides. Si ya lo tiene, no hay nada que hacer, pero si no lo tiene, por favor, agrégalo.
+
 ## Salida final al usuario
 
 Resumen en 4-6 líneas:
