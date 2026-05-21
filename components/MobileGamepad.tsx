@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef } from 'react';
+
 interface KeyMap {
   up?: string;
   down?: string;
@@ -50,27 +52,47 @@ function GamepadButton({
   label,
   keyValue,
   hold = false,
+  repeat = false,
+  repeatMs = 80,
   style,
   disabled = false,
 }: {
   label: string;
   keyValue?: string;
   hold?: boolean;
+  repeat?: boolean;
+  repeatMs?: number;
   style?: React.CSSProperties;
   disabled?: boolean;
 }) {
   const isDisabled = disabled || !keyValue;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRepeat = () => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
 
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!keyValue) return;
     dispatchKey(keyValue, 'keydown');
+    if (repeat) {
+      stopRepeat();
+      intervalRef.current = setInterval(
+        () => dispatchKey(keyValue, 'keydown'),
+        repeatMs,
+      );
+    }
   };
 
   const handleEnd = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!keyValue || !hold) return;
-    dispatchKey(keyValue, 'keyup');
+    if (!keyValue) return;
+    if (repeat) stopRepeat();
+    if (hold) dispatchKey(keyValue, 'keyup');
   };
 
   return (
@@ -187,6 +209,7 @@ export default function MobileGamepad({
           <GamepadButton
             label="B"
             keyValue={keyMap.b}
+            repeat
             style={{
               width: actionSize,
               height: actionSize,
@@ -201,6 +224,7 @@ export default function MobileGamepad({
           <GamepadButton
             label="A"
             keyValue={keyMap.a}
+            repeat
             style={{
               width: actionSize,
               height: actionSize,
