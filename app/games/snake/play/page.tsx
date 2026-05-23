@@ -131,7 +131,7 @@ export default function SnakePlay() {
         </div>
       </div>
 
-      <div className="crt w-full max-w-[800px]">
+      <div className="crt w-full max-w-[800px] mx-auto">
         <div
           className="crt-screen crt-screen--scale-canvas"
           style={{ aspectRatio: '1/1' }}
