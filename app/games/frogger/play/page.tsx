@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import MobileGamepad from '@/components/MobileGamepad';
 
@@ -22,9 +22,12 @@ function getSavedSkin() {
 }
 
 export default function FroggerPlay() {
-  const [score, setScore] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [lives, setLives] = useState(3);
+  const scoreRef = useRef(0);
+  const livesRef = useRef(3);
+  const levelRef = useRef(1);
+  const scoreEl = useRef<HTMLSpanElement>(null);
+  const livesEl = useRef<HTMLSpanElement>(null);
+  const levelEl = useRef<HTMLSpanElement>(null);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [name, setName] = useState('INVITADO');
@@ -41,11 +44,31 @@ export default function FroggerPlay() {
     localStorage.setItem('frogger-skin', key);
   }
 
-  const handleScoreChange = useCallback((s: number) => setScore(s), []);
-  const handleLevelChange = useCallback((l: number) => setLevel(l), []);
-  const handleLivesChange = useCallback((l: number) => setLives(l), []);
+  const handleScoreChange = useCallback((s: number) => {
+    scoreRef.current = s;
+    if (scoreEl.current)
+      scoreEl.current.textContent = s.toLocaleString('es-ES');
+  }, []);
+  const handleLevelChange = useCallback((l: number) => {
+    levelRef.current = l;
+    if (levelEl.current)
+      levelEl.current.textContent = String(l).padStart(2, '0');
+  }, []);
+  const handleLivesChange = useCallback((l: number) => {
+    livesRef.current = l;
+    if (livesEl.current) {
+      livesEl.current.innerHTML = Array.from({ length: 3 })
+        .map(
+          (_, i) =>
+            `<span style="color:${i < l ? 'var(--green)' : 'var(--ink-dim)'}">♥</span>`,
+        )
+        .join('');
+    }
+  }, []);
   const handleGameOver = useCallback((finalScore: number) => {
-    setScore(finalScore);
+    scoreRef.current = finalScore;
+    if (scoreEl.current)
+      scoreEl.current.textContent = finalScore.toLocaleString('es-ES');
     setOver(true);
   }, []);
 
@@ -57,9 +80,15 @@ export default function FroggerPlay() {
   }, [over]);
 
   function restart() {
-    setScore(0);
-    setLevel(1);
-    setLives(3);
+    scoreRef.current = 0;
+    livesRef.current = 3;
+    levelRef.current = 1;
+    if (scoreEl.current) scoreEl.current.textContent = '0';
+    if (livesEl.current)
+      livesEl.current.innerHTML = Array.from({ length: 3 })
+        .map(() => `<span style="color:var(--green)">♥</span>`)
+        .join('');
+    if (levelEl.current) levelEl.current.textContent = '01';
     setPaused(false);
     setOver(false);
     setSaved(false);
@@ -82,26 +111,29 @@ export default function FroggerPlay() {
             </div>
             <div className="hud-stat">
               <div className="l">Puntuación</div>
-              <div className="v">{score.toLocaleString('es-ES')}</div>
+              <div className="v">
+                <span ref={scoreEl}>0</span>
+              </div>
             </div>
             <div className="hud-stat lives">
               <div className="l">Vidas</div>
               <div className="v">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      color: i < lives ? 'var(--green)' : 'var(--ink-dim)',
-                    }}
-                  >
-                    ♥
-                  </span>
-                ))}
+                <span
+                  ref={livesEl}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      '<span style="color:var(--green)">♥</span>' +
+                      '<span style="color:var(--green)">♥</span>' +
+                      '<span style="color:var(--green)">♥</span>',
+                  }}
+                />
               </div>
             </div>
             <div className="hud-stat level">
               <div className="l">Nivel</div>
-              <div className="v">{String(level).padStart(2, '0')}</div>
+              <div className="v">
+                <span ref={levelEl}>01</span>
+              </div>
             </div>
             <div className="hud-stat">
               <div className="l">Skin</div>
@@ -201,7 +233,9 @@ export default function FroggerPlay() {
           <div className="modal">
             <h2>FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
-            <div className="final">{score.toLocaleString('es-ES')}</div>
+            <div className="final">
+              {scoreRef.current.toLocaleString('es-ES')}
+            </div>
             {!saved ? (
               <div className="input-row">
                 <input
@@ -220,7 +254,7 @@ export default function FroggerPlay() {
                     await supabase.from('scores').insert({
                       game_id: 'frogger',
                       player_name: name,
-                      score,
+                      score: scoreRef.current,
                       user_id: null,
                     });
                   }}

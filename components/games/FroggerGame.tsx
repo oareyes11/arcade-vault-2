@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,9 @@ const DEATH_FLASH_MS = 500;
 
 // Goal slot left-column starts; each slot is 2 cols wide
 const GOAL_STARTS = [1, 4, 7, 10, 13] as const;
+
+const DASH_ROAD: number[] = [8, 8];
+const DASH_CLEAR: number[] = [];
 
 // ── Skin system ───────────────────────────────────────────────────────────────
 
@@ -293,7 +296,10 @@ interface Frog {
 
 // ── Lane builder ─────────────────────────────────────────────────────────────
 
-function buildLanes(level: number): Lane[] {
+function buildLanes(level: number): {
+  lanes: Lane[];
+  laneIndexMap: Map<Lane, number>;
+} {
   const scale = Math.pow(1.15, level - 1);
 
   function roadLane(
@@ -328,7 +334,7 @@ function buildLanes(level: number): Lane[] {
     };
   }
 
-  return [
+  const lanesArr: Lane[] = [
     // Road (rows 8–12)
     roadLane(12, 1, 0.04, [
       { col: 0, width: 1, type: 'car' },
@@ -385,6 +391,8 @@ function buildLanes(level: number): Lane[] {
       { col: 12, width: 3, type: 'log' },
     ]),
   ];
+  const laneIndexMap = new Map<Lane, number>(lanesArr.map((l, i) => [l, i]));
+  return { lanes: lanesArr, laneIndexMap };
 }
 
 function roundTime(level: number): number {
@@ -425,7 +433,7 @@ function checkRoadCollision(frog: Frog, lanes: Lane[]): boolean {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function FroggerGame({
+function FroggerGame({
   paused,
   skinKey = 'classic',
   onScoreChange,
@@ -456,7 +464,7 @@ export default function FroggerGame({
     let score = 0;
     let level = 1;
     let timer = roundTime(1);
-    let lanes = buildLanes(1);
+    let { lanes, laneIndexMap } = buildLanes(1);
     let goals = [false, false, false, false, false];
     let highestRowReached = ROW_START;
 
@@ -526,7 +534,7 @@ export default function FroggerGame({
       score += 200;
       level += 1;
       goals = [false, false, false, false, false];
-      lanes = buildLanes(level);
+      ({ lanes, laneIndexMap } = buildLanes(level));
       timer = roundTime(level);
       prevScore = score;
       prevLevel = level;
@@ -623,9 +631,9 @@ export default function FroggerGame({
             e.col += COLS + e.width;
           }
           if (e.type === 'turtle') {
-            e.submergeTimer = (e.submergeTimer ?? 0) + dt;
             const cycle = TURTLE_VISIBLE_MS + TURTLE_SUBMERGED_MS;
-            e.submerged = e.submergeTimer % cycle >= TURTLE_VISIBLE_MS;
+            e.submergeTimer = ((e.submergeTimer ?? 0) + dt) % cycle;
+            e.submerged = e.submergeTimer >= TURTLE_VISIBLE_MS;
           }
         }
       }
@@ -720,14 +728,14 @@ export default function FroggerGame({
       // Road lane dividers
       ctx.strokeStyle = sk.dividerColor;
       ctx.lineWidth = 1;
-      ctx.setLineDash([8, 8]);
+      ctx.setLineDash(DASH_ROAD);
       for (let r = ROW_ROAD_TOP + 1; r <= ROW_ROAD_BOT; r++) {
         ctx.beginPath();
         ctx.moveTo(0, r * CELL);
         ctx.lineTo(CANVAS_W, r * CELL);
         ctx.stroke();
       }
-      ctx.setLineDash([]);
+      ctx.setLineDash(DASH_CLEAR);
 
       // Retro CRT highlight on safe zones
       if (!isNeon) {
@@ -779,7 +787,7 @@ export default function FroggerGame({
           const ew = e.width * CELL;
 
           if (e.type === 'car') {
-            const ci = lanes.indexOf(lane) % sk.carColors.length;
+            const ci = (laneIndexMap.get(lane) ?? 0) % sk.carColors.length;
             const carColor = sk.carColors[ci];
 
             if (isNeon) {
@@ -1081,12 +1089,22 @@ export default function FroggerGame({
 
     let rafId: number;
     let lastTime = 0;
+    let pauseDrawn = false;
 
     function loop(time: number) {
       if (!lastTime) lastTime = time;
       const dt = Math.min(time - lastTime, 50);
       lastTime = time;
-      if (!pausedRef.current) update(dt);
+      if (pausedRef.current) {
+        if (!pauseDrawn) {
+          draw();
+          pauseDrawn = true;
+        }
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+      pauseDrawn = false;
+      update(dt);
       draw();
       rafId = requestAnimationFrame(loop);
     }
@@ -1119,5 +1137,7 @@ export default function FroggerGame({
     </div>
   );
 }
+
+export default React.memo(FroggerGame);
 
 export type { Direction, Entity, Lane, Frog };
