@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,9 @@ const DEATH_FLASH_MS = 500;
 
 // Goal slot left-column starts; each slot is 2 cols wide
 const GOAL_STARTS = [1, 4, 7, 10, 13] as const;
+
+const DASH_ROAD: number[] = [8, 8];
+const DASH_CLEAR: number[] = [];
 
 // ── Skin system ───────────────────────────────────────────────────────────────
 
@@ -293,7 +296,10 @@ interface Frog {
 
 // ── Lane builder ─────────────────────────────────────────────────────────────
 
-function buildLanes(level: number): Lane[] {
+function buildLanes(level: number): {
+  lanes: Lane[];
+  laneIndexMap: Map<Lane, number>;
+} {
   const scale = Math.pow(1.15, level - 1);
 
   function roadLane(
@@ -328,7 +334,7 @@ function buildLanes(level: number): Lane[] {
     };
   }
 
-  return [
+  const lanesArr: Lane[] = [
     // Road (rows 8–12)
     roadLane(12, 1, 0.04, [
       { col: 0, width: 1, type: 'car' },
@@ -385,6 +391,8 @@ function buildLanes(level: number): Lane[] {
       { col: 12, width: 3, type: 'log' },
     ]),
   ];
+  const laneIndexMap = new Map<Lane, number>(lanesArr.map((l, i) => [l, i]));
+  return { lanes: lanesArr, laneIndexMap };
 }
 
 function roundTime(level: number): number {
@@ -423,9 +431,173 @@ function checkRoadCollision(frog: Frog, lanes: Lane[]): boolean {
   return false;
 }
 
+// ── Neon sprite cache ─────────────────────────────────────────────────────────
+// Each entity is pre-rendered once with shadowBlur into a small offscreen canvas.
+// draw() calls ctx.drawImage(sprite, x, y) — zero shadowBlur cost per frame.
+
+const SPRITE_PAD = 20; // px of padding around each sprite so blur doesn't clip
+
+interface NeonCache {
+  car: Map<string, HTMLCanvasElement>; // key: `${color}-${width}`
+  truckRight: HTMLCanvasElement; // cab on right side (lane.dir === 1)
+  truckLeft: HTMLCanvasElement; // cab on left side (lane.dir === -1)
+  log: Map<number, HTMLCanvasElement>; // key: cell width
+  turtleVisibleRight: HTMLCanvasElement;
+  turtleVisibleLeft: HTMLCanvasElement;
+  turtleSubmergedRight: HTMLCanvasElement;
+  turtleSubmergedLeft: HTMLCanvasElement;
+}
+
+function makeNeonCanvas(w: number, h: number): HTMLCanvasElement {
+  const el = document.createElement('canvas');
+  el.width = w + SPRITE_PAD * 2;
+  el.height = h + SPRITE_PAD * 2;
+  return el;
+}
+
+function spriteCarNeon(
+  sk: Skin,
+  width: number,
+  color: string,
+): HTMLCanvasElement {
+  const ew = width * CELL;
+  const s = makeNeonCanvas(ew, CELL);
+  const c = s.getContext('2d')!;
+  const P = SPRITE_PAD;
+  c.shadowBlur = 10;
+  c.shadowColor = color;
+  c.fillStyle = color;
+  c.fillRect(P + 2, P + 9, ew - 4, CELL - 18);
+  c.shadowBlur = 0;
+  c.fillStyle = sk.carWindow;
+  c.fillRect(P + 5, P + 11, ew - 10, 8);
+  c.fillStyle = sk.carWheel;
+  c.beginPath();
+  c.arc(P + 8, P + CELL - 9, 5, 0, Math.PI * 2);
+  c.arc(P + ew - 8, P + CELL - 9, 5, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = color;
+  c.lineWidth = 1;
+  c.shadowBlur = 6;
+  c.shadowColor = color;
+  c.strokeRect(P + 2, P + 9, ew - 4, CELL - 18);
+  c.shadowBlur = 0;
+  return s;
+}
+
+function spriteTruckNeon(sk: Skin, dir: 1 | -1): HTMLCanvasElement {
+  const ew = 3 * CELL;
+  const cabW = CELL - 4;
+  const s = makeNeonCanvas(ew, CELL);
+  const c = s.getContext('2d')!;
+  const P = SPRITE_PAD;
+  c.shadowBlur = 8;
+  c.shadowColor = '#00aaff';
+  c.fillStyle = sk.truckBody;
+  c.fillRect(P + 2, P + 7, ew - 4, CELL - 14);
+  c.shadowBlur = 0;
+  const cabX = dir === 1 ? P + ew - cabW - 2 : P + 2;
+  c.fillStyle = sk.truckCab;
+  c.fillRect(cabX, P + 5, cabW, CELL - 10);
+  c.fillStyle = sk.truckWindow;
+  c.fillRect(cabX + 4, P + 9, cabW - 8, 10);
+  c.fillStyle = sk.truckWheel;
+  c.beginPath();
+  c.arc(P + 8, P + CELL - 9, 5, 0, Math.PI * 2);
+  c.arc(P + ew - 8, P + CELL - 9, 5, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = '#00aaff';
+  c.lineWidth = 1;
+  c.shadowBlur = 6;
+  c.shadowColor = '#00aaff';
+  c.strokeRect(P + 2, P + 7, ew - 4, CELL - 14);
+  c.shadowBlur = 0;
+  return s;
+}
+
+function spriteLogNeon(sk: Skin, width: number): HTMLCanvasElement {
+  const ew = width * CELL;
+  const s = makeNeonCanvas(ew, CELL);
+  const c = s.getContext('2d')!;
+  const P = SPRITE_PAD;
+  c.shadowBlur = 6;
+  c.shadowColor = '#885522';
+  c.fillStyle = sk.logBody;
+  c.fillRect(P + 1, P + 7, ew - 2, CELL - 14);
+  c.shadowBlur = 0;
+  c.strokeStyle = sk.logGrain;
+  c.lineWidth = 1;
+  for (let lx = P + 1 + 10; lx < P + ew - 2; lx += 12) {
+    c.beginPath();
+    c.moveTo(lx, P + 7);
+    c.lineTo(lx, P + CELL - 7);
+    c.stroke();
+  }
+  c.fillStyle = sk.logEnd;
+  c.beginPath();
+  c.ellipse(P + 4, P + CELL / 2, 3, (CELL - 14) / 2, 0, 0, Math.PI * 2);
+  c.ellipse(P + ew - 4, P + CELL / 2, 3, (CELL - 14) / 2, 0, 0, Math.PI * 2);
+  c.fill();
+  return s;
+}
+
+function spriteTurtleSegNeon(
+  sk: Skin,
+  dir: 1 | -1,
+  submerged: boolean,
+): HTMLCanvasElement {
+  const s = makeNeonCanvas(CELL, CELL);
+  const c = s.getContext('2d')!;
+  const P = SPRITE_PAD;
+  const tx = P + CELL / 2;
+  const ty = P + CELL / 2;
+  const bodyColor = submerged ? sk.turtleBodySub : sk.turtleBody;
+  if (!submerged) {
+    c.shadowBlur = 10;
+    c.shadowColor = sk.turtleBody;
+  }
+  c.fillStyle = bodyColor;
+  c.beginPath();
+  c.arc(tx, ty, 14, 0, Math.PI * 2);
+  c.fill();
+  c.shadowBlur = 0;
+  c.strokeStyle = submerged ? sk.turtleShellSub : sk.turtleShell;
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.moveTo(tx, ty - 10);
+  c.lineTo(tx, ty + 10);
+  c.moveTo(tx - 10, ty);
+  c.lineTo(tx + 10, ty);
+  c.stroke();
+  c.fillStyle = submerged ? sk.turtleHeadSub : sk.turtleHead;
+  c.beginPath();
+  c.arc(tx + (dir === 1 ? 12 : -12), ty, 6, 0, Math.PI * 2);
+  c.fill();
+  return s;
+}
+
+function buildNeonCache(sk: Skin): NeonCache {
+  const car = new Map<string, HTMLCanvasElement>();
+  for (const color of sk.carColors) {
+    for (const w of [1, 2]) {
+      car.set(`${color}-${w}`, spriteCarNeon(sk, w, color));
+    }
+  }
+  return {
+    car,
+    truckRight: spriteTruckNeon(sk, 1),
+    truckLeft: spriteTruckNeon(sk, -1),
+    log: new Map([2, 3, 4].map((w) => [w, spriteLogNeon(sk, w)])),
+    turtleVisibleRight: spriteTurtleSegNeon(sk, 1, false),
+    turtleVisibleLeft: spriteTurtleSegNeon(sk, -1, false),
+    turtleSubmergedRight: spriteTurtleSegNeon(sk, 1, true),
+    turtleSubmergedLeft: spriteTurtleSegNeon(sk, -1, true),
+  };
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function FroggerGame({
+function FroggerGame({
   paused,
   skinKey = 'classic',
   onScoreChange,
@@ -436,13 +608,16 @@ export default function FroggerGame({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
   const skinRef = useRef(SKINS[skinKey ?? 'classic'] ?? SKINS.classic);
+  const neonCacheRef = useRef<NeonCache | null>(null);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
 
   useEffect(() => {
-    skinRef.current = SKINS[skinKey ?? 'classic'] ?? SKINS.classic;
+    const sk = SKINS[skinKey ?? 'classic'] ?? SKINS.classic;
+    skinRef.current = sk;
+    neonCacheRef.current = sk.neonGlow !== null ? buildNeonCache(sk) : null;
   }, [skinKey]);
 
   useEffect(() => {
@@ -456,7 +631,7 @@ export default function FroggerGame({
     let score = 0;
     let level = 1;
     let timer = roundTime(1);
-    let lanes = buildLanes(1);
+    let { lanes, laneIndexMap } = buildLanes(1);
     let goals = [false, false, false, false, false];
     let highestRowReached = ROW_START;
 
@@ -526,7 +701,7 @@ export default function FroggerGame({
       score += 200;
       level += 1;
       goals = [false, false, false, false, false];
-      lanes = buildLanes(level);
+      ({ lanes, laneIndexMap } = buildLanes(level));
       timer = roundTime(level);
       prevScore = score;
       prevLevel = level;
@@ -623,9 +798,9 @@ export default function FroggerGame({
             e.col += COLS + e.width;
           }
           if (e.type === 'turtle') {
-            e.submergeTimer = (e.submergeTimer ?? 0) + dt;
             const cycle = TURTLE_VISIBLE_MS + TURTLE_SUBMERGED_MS;
-            e.submerged = e.submergeTimer % cycle >= TURTLE_VISIBLE_MS;
+            e.submergeTimer = ((e.submergeTimer ?? 0) + dt) % cycle;
+            e.submerged = e.submergeTimer >= TURTLE_VISIBLE_MS;
           }
         }
       }
@@ -720,14 +895,14 @@ export default function FroggerGame({
       // Road lane dividers
       ctx.strokeStyle = sk.dividerColor;
       ctx.lineWidth = 1;
-      ctx.setLineDash([8, 8]);
+      ctx.setLineDash(DASH_ROAD);
       for (let r = ROW_ROAD_TOP + 1; r <= ROW_ROAD_BOT; r++) {
         ctx.beginPath();
         ctx.moveTo(0, r * CELL);
         ctx.lineTo(CANVAS_W, r * CELL);
         ctx.stroke();
       }
-      ctx.setLineDash([]);
+      ctx.setLineDash(DASH_CLEAR);
 
       // Retro CRT highlight on safe zones
       if (!isNeon) {
@@ -772,6 +947,8 @@ export default function FroggerGame({
       }
 
       // Entities
+      const neonCache = neonCacheRef.current;
+      const P = SPRITE_PAD;
       for (const lane of lanes) {
         for (const e of lane.entities) {
           const ex = e.col * CELL;
@@ -779,149 +956,177 @@ export default function FroggerGame({
           const ew = e.width * CELL;
 
           if (e.type === 'car') {
-            const ci = lanes.indexOf(lane) % sk.carColors.length;
+            const ci = (laneIndexMap.get(lane) ?? 0) % sk.carColors.length;
             const carColor = sk.carColors[ci];
 
-            if (isNeon) {
-              ctx.shadowBlur = 10;
-              ctx.shadowColor = carColor;
-            }
-            ctx.fillStyle = carColor;
-            ctx.fillRect(ex + 2, ey + 9, ew - 4, CELL - 18);
-
-            // Retro highlight strip
-            if (!isNeon) {
-              ctx.fillStyle = 'rgba(255,255,255,0.12)';
-              ctx.fillRect(ex + 2, ey + 9, ew - 4, 4);
-            }
-
-            if (isNeon) ctx.shadowBlur = 0;
-
-            ctx.fillStyle = sk.carWindow;
-            ctx.fillRect(ex + 5, ey + 11, ew - 10, 8);
-            ctx.fillStyle = sk.carWheel;
-            ctx.beginPath();
-            ctx.arc(ex + 8, ey + CELL - 9, 5, 0, Math.PI * 2);
-            ctx.arc(ex + ew - 8, ey + CELL - 9, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (isNeon) {
-              ctx.strokeStyle = carColor;
-              ctx.lineWidth = 1;
-              ctx.shadowBlur = 6;
-              ctx.shadowColor = carColor;
-              ctx.strokeRect(ex + 2, ey + 9, ew - 4, CELL - 18);
-              ctx.shadowBlur = 0;
+            if (isNeon && neonCache) {
+              ctx.drawImage(
+                neonCache.car.get(`${carColor}-${e.width}`)!,
+                ex - P,
+                ey - P,
+              );
+            } else {
+              if (isNeon) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = carColor;
+              }
+              ctx.fillStyle = carColor;
+              ctx.fillRect(ex + 2, ey + 9, ew - 4, CELL - 18);
+              if (!isNeon) {
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                ctx.fillRect(ex + 2, ey + 9, ew - 4, 4);
+              }
+              if (isNeon) ctx.shadowBlur = 0;
+              ctx.fillStyle = sk.carWindow;
+              ctx.fillRect(ex + 5, ey + 11, ew - 10, 8);
+              ctx.fillStyle = sk.carWheel;
+              ctx.beginPath();
+              ctx.arc(ex + 8, ey + CELL - 9, 5, 0, Math.PI * 2);
+              ctx.arc(ex + ew - 8, ey + CELL - 9, 5, 0, Math.PI * 2);
+              ctx.fill();
+              if (isNeon) {
+                ctx.strokeStyle = carColor;
+                ctx.lineWidth = 1;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = carColor;
+                ctx.strokeRect(ex + 2, ey + 9, ew - 4, CELL - 18);
+                ctx.shadowBlur = 0;
+              }
             }
           } else if (e.type === 'truck') {
-            if (isNeon) {
-              ctx.shadowBlur = 8;
-              ctx.shadowColor = '#00aaff';
-            }
-            ctx.fillStyle = sk.truckBody;
-            ctx.fillRect(ex + 2, ey + 7, ew - 4, CELL - 14);
-
-            if (!isNeon) {
-              ctx.fillStyle = 'rgba(255,255,255,0.08)';
-              ctx.fillRect(ex + 2, ey + 7, ew - 4, 4);
-            }
-
-            const cabW = CELL - 4;
-            const cabX = lane.dir === 1 ? ex + ew - cabW - 2 : ex + 2;
-            ctx.fillStyle = sk.truckCab;
-            ctx.fillRect(cabX, ey + 5, cabW, CELL - 10);
-            ctx.fillStyle = sk.truckWindow;
-            ctx.fillRect(cabX + 4, ey + 9, cabW - 8, 10);
-            ctx.fillStyle = sk.truckWheel;
-            ctx.beginPath();
-            ctx.arc(ex + 8, ey + CELL - 9, 5, 0, Math.PI * 2);
-            ctx.arc(ex + ew - 8, ey + CELL - 9, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (isNeon) {
-              ctx.strokeStyle = '#00aaff';
-              ctx.lineWidth = 1;
-              ctx.shadowBlur = 6;
-              ctx.shadowColor = '#00aaff';
-              ctx.strokeRect(ex + 2, ey + 7, ew - 4, CELL - 14);
-              ctx.shadowBlur = 0;
+            if (isNeon && neonCache) {
+              ctx.drawImage(
+                lane.dir === 1 ? neonCache.truckRight : neonCache.truckLeft,
+                ex - P,
+                ey - P,
+              );
+            } else {
+              if (isNeon) {
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#00aaff';
+              }
+              ctx.fillStyle = sk.truckBody;
+              ctx.fillRect(ex + 2, ey + 7, ew - 4, CELL - 14);
+              if (!isNeon) {
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.fillRect(ex + 2, ey + 7, ew - 4, 4);
+              }
+              const cabW = CELL - 4;
+              const cabX = lane.dir === 1 ? ex + ew - cabW - 2 : ex + 2;
+              ctx.fillStyle = sk.truckCab;
+              ctx.fillRect(cabX, ey + 5, cabW, CELL - 10);
+              ctx.fillStyle = sk.truckWindow;
+              ctx.fillRect(cabX + 4, ey + 9, cabW - 8, 10);
+              ctx.fillStyle = sk.truckWheel;
+              ctx.beginPath();
+              ctx.arc(ex + 8, ey + CELL - 9, 5, 0, Math.PI * 2);
+              ctx.arc(ex + ew - 8, ey + CELL - 9, 5, 0, Math.PI * 2);
+              ctx.fill();
+              if (isNeon) {
+                ctx.strokeStyle = '#00aaff';
+                ctx.lineWidth = 1;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#00aaff';
+                ctx.strokeRect(ex + 2, ey + 7, ew - 4, CELL - 14);
+                ctx.shadowBlur = 0;
+              }
             }
           } else if (e.type === 'log') {
-            if (isNeon) {
-              ctx.shadowBlur = 6;
-              ctx.shadowColor = '#885522';
-            }
-            ctx.fillStyle = sk.logBody;
-            ctx.fillRect(ex + 1, ey + 7, ew - 2, CELL - 14);
-
-            if (!isNeon) {
-              ctx.fillStyle = 'rgba(255,255,255,0.06)';
-              ctx.fillRect(ex + 1, ey + 7, ew - 2, 4);
-            }
-
-            ctx.strokeStyle = sk.logGrain;
-            ctx.lineWidth = 1;
-            for (let lx = ex + 10; lx < ex + ew - 2; lx += 12) {
-              ctx.beginPath();
-              ctx.moveTo(lx, ey + 7);
-              ctx.lineTo(lx, ey + CELL - 7);
-              ctx.stroke();
-            }
-            ctx.fillStyle = sk.logEnd;
-            ctx.beginPath();
-            ctx.ellipse(
-              ex + 4,
-              ey + CELL / 2,
-              3,
-              (CELL - 14) / 2,
-              0,
-              0,
-              Math.PI * 2,
-            );
-            ctx.ellipse(
-              ex + ew - 4,
-              ey + CELL / 2,
-              3,
-              (CELL - 14) / 2,
-              0,
-              0,
-              Math.PI * 2,
-            );
-            ctx.fill();
-
-            if (isNeon) ctx.shadowBlur = 0;
-          } else if (e.type === 'turtle') {
-            ctx.globalAlpha = e.submerged ? 0.28 : 1;
-            for (let t = 0; t < e.width; t++) {
-              const tx = ex + t * CELL + CELL / 2;
-              const ty = ey + CELL / 2;
-              const bodyColor = e.submerged ? sk.turtleBodySub : sk.turtleBody;
-
-              if (isNeon && !e.submerged) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = sk.turtleBody;
+            if (isNeon && neonCache) {
+              ctx.drawImage(neonCache.log.get(e.width)!, ex - P, ey - P);
+            } else {
+              if (isNeon) {
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#885522';
               }
-              ctx.fillStyle = bodyColor;
+              ctx.fillStyle = sk.logBody;
+              ctx.fillRect(ex + 1, ey + 7, ew - 2, CELL - 14);
+              if (!isNeon) {
+                ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                ctx.fillRect(ex + 1, ey + 7, ew - 2, 4);
+              }
+              ctx.strokeStyle = sk.logGrain;
+              ctx.lineWidth = 1;
+              for (let lx = ex + 10; lx < ex + ew - 2; lx += 12) {
+                ctx.beginPath();
+                ctx.moveTo(lx, ey + 7);
+                ctx.lineTo(lx, ey + CELL - 7);
+                ctx.stroke();
+              }
+              ctx.fillStyle = sk.logEnd;
               ctx.beginPath();
-              ctx.arc(tx, ty, 14, 0, Math.PI * 2);
+              ctx.ellipse(
+                ex + 4,
+                ey + CELL / 2,
+                3,
+                (CELL - 14) / 2,
+                0,
+                0,
+                Math.PI * 2,
+              );
+              ctx.ellipse(
+                ex + ew - 4,
+                ey + CELL / 2,
+                3,
+                (CELL - 14) / 2,
+                0,
+                0,
+                Math.PI * 2,
+              );
               ctx.fill();
               if (isNeon) ctx.shadowBlur = 0;
-
-              ctx.strokeStyle = e.submerged
-                ? sk.turtleShellSub
-                : sk.turtleShell;
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              ctx.moveTo(tx, ty - 10);
-              ctx.lineTo(tx, ty + 10);
-              ctx.moveTo(tx - 10, ty);
-              ctx.lineTo(tx + 10, ty);
-              ctx.stroke();
-
-              ctx.fillStyle = e.submerged ? sk.turtleHeadSub : sk.turtleHead;
-              ctx.beginPath();
-              ctx.arc(tx + (lane.dir === 1 ? 12 : -12), ty, 6, 0, Math.PI * 2);
-              ctx.fill();
+            }
+          } else if (e.type === 'turtle') {
+            ctx.globalAlpha = e.submerged ? 0.28 : 1;
+            if (isNeon && neonCache) {
+              for (let t = 0; t < e.width; t++) {
+                const sx = ex + t * CELL;
+                const sprite = e.submerged
+                  ? lane.dir === 1
+                    ? neonCache.turtleSubmergedRight
+                    : neonCache.turtleSubmergedLeft
+                  : lane.dir === 1
+                    ? neonCache.turtleVisibleRight
+                    : neonCache.turtleVisibleLeft;
+                ctx.drawImage(sprite, sx - P, ey - P);
+              }
+            } else {
+              for (let t = 0; t < e.width; t++) {
+                const tx = ex + t * CELL + CELL / 2;
+                const ty = ey + CELL / 2;
+                const bodyColor = e.submerged
+                  ? sk.turtleBodySub
+                  : sk.turtleBody;
+                if (isNeon && !e.submerged) {
+                  ctx.shadowBlur = 10;
+                  ctx.shadowColor = sk.turtleBody;
+                }
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.arc(tx, ty, 14, 0, Math.PI * 2);
+                ctx.fill();
+                if (isNeon) ctx.shadowBlur = 0;
+                ctx.strokeStyle = e.submerged
+                  ? sk.turtleShellSub
+                  : sk.turtleShell;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(tx, ty - 10);
+                ctx.lineTo(tx, ty + 10);
+                ctx.moveTo(tx - 10, ty);
+                ctx.lineTo(tx + 10, ty);
+                ctx.stroke();
+                ctx.fillStyle = e.submerged ? sk.turtleHeadSub : sk.turtleHead;
+                ctx.beginPath();
+                ctx.arc(
+                  tx + (lane.dir === 1 ? 12 : -12),
+                  ty,
+                  6,
+                  0,
+                  Math.PI * 2,
+                );
+                ctx.fill();
+              }
             }
             ctx.globalAlpha = 1;
           }
@@ -1081,12 +1286,22 @@ export default function FroggerGame({
 
     let rafId: number;
     let lastTime = 0;
+    let pauseDrawn = false;
 
     function loop(time: number) {
       if (!lastTime) lastTime = time;
       const dt = Math.min(time - lastTime, 50);
       lastTime = time;
-      if (!pausedRef.current) update(dt);
+      if (pausedRef.current) {
+        if (!pauseDrawn) {
+          draw();
+          pauseDrawn = true;
+        }
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+      pauseDrawn = false;
+      update(dt);
       draw();
       rafId = requestAnimationFrame(loop);
     }
@@ -1119,5 +1334,7 @@ export default function FroggerGame({
     </div>
   );
 }
+
+export default React.memo(FroggerGame);
 
 export type { Direction, Entity, Lane, Frog };
