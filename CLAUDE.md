@@ -23,6 +23,8 @@ No test runner configured.
 
 Usa siempre `/frontend-design` para diseñar la interfaz de usuario.
 
+Usa `/spec-impl-game` (skill local en `.agents/skills/spec-impl-game/`) como variante de `/spec-impl` para specs de juegos: sigue el mismo flujo (Fases 1–4) y al terminar la implementación encadena automáticamente `@skin-designer` y luego `@mobile-porter` de forma secuencial.
+
 ## Agentes
 
 - **`game-planner`** (`.claude/agents/game-planner.md`) — planifica y sugiere el próximo juego a implementar. Lee el catálogo actual, evalúa candidatos por diversidad de género, factibilidad en canvas 2D y reconocimiento clásico, y mantiene una memoria persistente de sugerencias en `references/game-suggestions-todo.md`. Úsalo cuando el usuario pregunte qué juego sigue o pida ideas.
