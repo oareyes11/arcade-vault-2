@@ -32,6 +32,8 @@ const ROW_START = 13;
 
 const ROUND_TIME = 15; // seconds per round (decreases with level)
 const JUMP_MS = 120; // animation duration in ms
+const TURTLE_VISIBLE_MS = 3000;
+const TURTLE_SUBMERGED_MS = 1500;
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
@@ -59,6 +61,108 @@ interface Frog {
   animT: number; // ms elapsed since jump started
   targetCol: number;
   targetRow: number;
+}
+
+// ── Lane builder ─────────────────────────────────────────────────────────────
+
+function buildLanes(level: number): Lane[] {
+  const scale = Math.pow(1.15, level - 1);
+
+  function roadLane(
+    row: number,
+    dir: 1 | -1,
+    baseSpeed: number,
+    defs: { col: number; width: number; type: 'car' | 'truck' }[],
+  ): Lane {
+    return {
+      row,
+      speed: baseSpeed * scale,
+      dir,
+      entities: defs.map((d) => ({ ...d })),
+    };
+  }
+
+  function riverLane(
+    row: number,
+    dir: 1 | -1,
+    baseSpeed: number,
+    defs: { col: number; width: number; type: 'log' | 'turtle' }[],
+  ): Lane {
+    return {
+      row,
+      speed: baseSpeed * scale,
+      dir,
+      entities: defs.map((d) =>
+        d.type === 'turtle'
+          ? { ...d, submerged: false, submergeTimer: 0 }
+          : { ...d },
+      ),
+    };
+  }
+
+  return [
+    // ── Road (rows 8–12, bottom to top) ──
+    roadLane(12, 1, 0.04, [
+      { col: 0, width: 1, type: 'car' },
+      { col: 5, width: 1, type: 'car' },
+      { col: 10, width: 1, type: 'car' },
+    ]),
+    roadLane(11, -1, 0.055, [
+      { col: 0, width: 3, type: 'truck' },
+      { col: 9, width: 3, type: 'truck' },
+    ]),
+    roadLane(10, 1, 0.05, [
+      { col: 0, width: 2, type: 'car' },
+      { col: 6, width: 2, type: 'car' },
+      { col: 12, width: 2, type: 'car' },
+    ]),
+    roadLane(9, -1, 0.07, [
+      { col: 0, width: 3, type: 'truck' },
+      { col: 6, width: 1, type: 'car' },
+      { col: 11, width: 3, type: 'truck' },
+    ]),
+    roadLane(8, 1, 0.065, [
+      { col: 0, width: 1, type: 'car' },
+      { col: 4, width: 1, type: 'car' },
+      { col: 8, width: 1, type: 'car' },
+      { col: 12, width: 1, type: 'car' },
+    ]),
+    // ── River (rows 1–6, bottom to top) ──
+    riverLane(6, 1, 0.035, [
+      { col: 0, width: 3, type: 'log' },
+      { col: 6, width: 3, type: 'log' },
+      { col: 12, width: 2, type: 'log' },
+    ]),
+    riverLane(5, -1, 0.04, [
+      { col: 1, width: 2, type: 'turtle' },
+      { col: 7, width: 2, type: 'turtle' },
+      { col: 12, width: 2, type: 'turtle' },
+    ]),
+    riverLane(4, 1, 0.05, [
+      { col: 0, width: 4, type: 'log' },
+      { col: 8, width: 4, type: 'log' },
+    ]),
+    riverLane(3, -1, 0.045, [
+      { col: 0, width: 3, type: 'turtle' },
+      { col: 6, width: 3, type: 'turtle' },
+      { col: 12, width: 2, type: 'turtle' },
+    ]),
+    riverLane(2, 1, 0.055, [
+      { col: 0, width: 3, type: 'log' },
+      { col: 8, width: 4, type: 'log' },
+    ]),
+    riverLane(1, -1, 0.04, [
+      { col: 0, width: 2, type: 'turtle' },
+      { col: 5, width: 2, type: 'turtle' },
+      { col: 11, width: 2, type: 'turtle' },
+    ]),
+  ];
+}
+
+// ── Round timer helper ────────────────────────────────────────────────────────
+
+function roundTime(level: number): number {
+  return Math.max(5, ROUND_TIME - (level - 1) * 0.5);
 }
 
 // ── Component placeholder (game logic added in subsequent steps) ──────────────
