@@ -217,6 +217,49 @@ Cada paso deja el sistema funcional.
 
 ---
 
+## Post-implementación: problema residual en skin Neon
+
+### Diagnóstico (2026-05-25)
+
+Tras implementar los 6 pasos del spec, los skins **Classic** y **Retro** fueron fluidos, pero el skin **Neon** seguía con jank. La causa raíz no era ninguno de los problemas del scope original — era el uso masivo de `ctx.shadowBlur` en el loop `draw()`:
+
+| Bloque                      | Llamadas `shadowBlur > 0` por frame |
+| --------------------------- | ----------------------------------- |
+| Coches (fill + stroke neon) | ~2 × nº coches ≈ 12                 |
+| Camiones (fill + stroke)    | ~2 × nº camiones ≈ 10               |
+| Logs                        | ~1 × nº logs ≈ 9                    |
+| Tortugas (por segmento)     | ~1 × nº segmentos ≈ 18              |
+| Goals, rana, timer, vidas   | ~5–10 fijos                         |
+| **Total**                   | **~60–70 por frame, sólo en neon**  |
+
+`ctx.shadowBlur` hace que el navegador rasterice cada shape dos veces y aplique un desenfoque gaussiano — notoriamente caro en Canvas 2D. Los otros juegos del repo usan el mismo patrón pero con muchas menos shapes por frame.
+
+### Solución aplicada: caché de sprites neon offscreen
+
+Se pre-renderizó cada tipo de entidad neon **una sola vez** al montar (y al cambiar de skin) en pequeños `HTMLCanvasElement` con `shadowBlur` ya horneado. El loop `draw()` llama `ctx.drawImage(sprite, x, y)` — coste de composición, sin blur runtime.
+
+**Sprites generados (~20 en total):**
+
+- `spriteCarNeon(sk, width, color)` — por color × ancho (1 o 2 celdas)
+- `spriteTruckNeon(sk, dir)` — dos variantes: cab derecha / cab izquierda
+- `spriteLogNeon(sk, width)` — anchos 2, 3, 4
+- `spriteTurtleSegNeon(sk, dir, submerged)` — 4 variantes (dir × submerged)
+
+**Cambios en `FroggerGame.tsx`:**
+
+- Funciones `spriteCarNeon`, `spriteTruckNeon`, `spriteLogNeon`, `spriteTurtleSegNeon`, `buildNeonCache` a nivel de módulo.
+- `interface NeonCache` con los mapas de sprites.
+- `const SPRITE_PAD = 20` — padding para que el blur no se recorte en los bordes.
+- `neonCacheRef = useRef<NeonCache | null>(null)` en el componente.
+- `useEffect([skinKey])` unificado: actualiza `skinRef.current` **y** reconstruye `neonCacheRef.current`.
+- Loop de entidades en `draw()`: ramificación `if (isNeon && neonCache) { drawImage } else { código original }`.
+
+**Resultado:** de ~65 invocaciones `shadowBlur` por frame a **≤5** (rana, patas durante salto, barra de tiempo, goals, vidas), manteniendo el look visual idéntico al diseño original neon.
+
+**Commit:** `35b7672` — `perf(frogger): neon sprite cache eliminates per-frame shadowBlur on entities`
+
+---
+
 ## Decisiones tomadas y descartadas
 
 - **Offscreen canvas para el fondo estático**: descartado — complejidad no justificada hasta comprobar que las fixes simples resuelven el problema.
