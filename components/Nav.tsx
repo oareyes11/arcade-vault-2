@@ -8,7 +8,7 @@ import { useUser } from '@/app/context/UserContext';
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { user, signOut } = useUser();
+  const { username, signOut } = useUser();
 
   const isLibrary = pathname.startsWith('/games');
   const isHall = pathname === '/hall-of-fame';
@@ -19,10 +19,12 @@ export default function Nav() {
     setOpen(false);
   }
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await signOut();
     close();
   }
+
+  const initial = username ? username[0].toUpperCase() : null;
 
   return (
     <>
@@ -53,13 +55,43 @@ export default function Nav() {
           <span>CRÉDITOS · 03</span>
         </div>
 
-        {user ? (
-          <button className="btn ghost auth-btn" onClick={handleSignOut}>
-            {user} ▾
-          </button>
+        {username ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'var(--neon-cyan)',
+                color: 'var(--bg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {initial}
+            </div>
+            <span
+              style={{
+                fontSize: 12,
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.08em',
+                color: 'var(--ink)',
+              }}
+            >
+              {username}
+            </span>
+            <button className="btn ghost auth-btn" onClick={handleSignOut}>
+              CERRAR SESIÓN
+            </button>
+          </div>
         ) : (
           <Link href="/auth" className="btn auth-btn">
-            Iniciar Sesión
+            ACCESO
           </Link>
         )}
 
@@ -102,13 +134,23 @@ export default function Nav() {
         <Link href="/about" className={isAbout ? 'active' : ''} onClick={close}>
           Sobre Nosotros
         </Link>
-        <Link
-          href="/auth"
-          className={pathname === '/auth' ? 'active' : ''}
-          onClick={close}
-        >
-          {user ? 'Cuenta' : 'Iniciar Sesión'}
-        </Link>
+        {username ? (
+          <button
+            className="btn ghost"
+            style={{ textAlign: 'left', padding: 0, marginTop: 8 }}
+            onClick={handleSignOut}
+          >
+            CERRAR SESIÓN ({username})
+          </button>
+        ) : (
+          <Link
+            href="/auth"
+            className={pathname === '/auth' ? 'active' : ''}
+            onClick={close}
+          >
+            ACCESO
+          </Link>
+        )}
         <div style={{ flex: 1 }} />
         <div
           className="pixel"
