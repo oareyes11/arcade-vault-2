@@ -7,6 +7,8 @@ import { useUser } from '@/app/context/UserContext';
 
 type View = 'in' | 'up' | 'forgot';
 
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
 export default function Auth() {
   const { user } = useUser();
   const [tab, setTab] = useState<'in' | 'up'>('in');
@@ -50,6 +52,12 @@ export default function Auth() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!PASSWORD_REGEX.test(pass)) {
+      setError(
+        'La contraseña debe tener mínimo 8 caracteres e incluir mayúsculas, minúsculas, números y símbolos.',
+      );
+      return;
+    }
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
