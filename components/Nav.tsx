@@ -8,7 +8,7 @@ import { useUser } from '@/app/context/UserContext';
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { username, signOut } = useUser();
+  const { username, avatarUrl, signOut } = useUser();
 
   const isLibrary = pathname.startsWith('/games');
   const isHall = pathname === '/hall-of-fame';
@@ -59,21 +59,39 @@ export default function Nav() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div
               style={{
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 borderRadius: '50%',
-                background: 'var(--neon-cyan)',
-                color: 'var(--bg)',
+                overflow: 'hidden',
+                border: '2px solid var(--neon-cyan)',
+                boxShadow: '0 0 8px var(--neon-cyan)',
+                flexShrink: 0,
+                background: 'var(--bg-card)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 12,
-                fontWeight: 700,
-                flexShrink: 0,
               }}
             >
-              {initial}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={username}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: 'var(--neon-cyan)',
+                    lineHeight: 1,
+                  }}
+                >
+                  {initial}
+                </span>
+              )}
             </div>
             <span
               style={{

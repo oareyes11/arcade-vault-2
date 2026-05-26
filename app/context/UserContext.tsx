@@ -8,6 +8,7 @@ interface UserContextValue {
   user: User | null;
   session: Session | null;
   username: string | null;
+  avatarUrl: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -15,6 +16,7 @@ const UserContext = createContext<UserContextValue>({
   user: null,
   session: null,
   username: null,
+  avatarUrl: null,
   signOut: async () => {},
 });
 
@@ -45,10 +47,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   }
 
-  const username = user?.user_metadata?.username ?? null;
+  const username =
+    user?.user_metadata?.username ??
+    user?.user_metadata?.full_name?.split(' ')[0]?.toUpperCase().slice(0, 10) ??
+    user?.email?.split('@')[0]?.toUpperCase().slice(0, 10) ??
+    null;
+
+  const avatarUrl: string | null =
+    user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture ?? null;
 
   return (
-    <UserContext.Provider value={{ user, session, username, signOut }}>
+    <UserContext.Provider
+      value={{ user, session, username, avatarUrl, signOut }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -1,12 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useUser } from '@/app/context/UserContext';
 
 type View = 'in' | 'up' | 'forgot';
 
 export default function Auth() {
+  const { user } = useUser();
   const [tab, setTab] = useState<'in' | 'up'>('in');
   const [view, setView] = useState<View>('in');
   const [username, setUsername] = useState('');
@@ -16,6 +18,10 @@ export default function Auth() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (user) router.replace('/');
+  }, [user, router]);
 
   function switchTab(t: 'in' | 'up') {
     setTab(t);
