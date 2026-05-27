@@ -32,6 +32,7 @@ Usa `/spec-impl-game` (skill local en `.agents/skills/spec-impl-game/`) como var
 - **`skin-designer`** — aplica los 3 skins canónicos (classic, retro, neon) a un juego. Úsalo con "aplica skins a \<juego\>". Detalle: `.claude/agents/skin-designer.md`.
 - **`mobile-porter`** — añade controles táctiles (spec 10) a un juego sin tocar el componente canvas. Úsalo con "porta \<juego\> a mobile". Detalle: `.claude/agents/mobile-porter.md`.
 - **`game-performance-booster`** — audita y corrige los 7 patrones de performance (spec 12) en un juego. Úsalo con "optimiza \<juego\>". Detalle: `.claude/agents/game-performance-booster.md`.
+- **`security-auditor`** — audita seguridad de DB Supabase (RLS, políticas, advisors) y app Next.js (headers, proxy.ts, secretos, deps). Solo lectura. Bitácora en `references/security/audit-log.md`. Úsalo con "audita seguridad". Detalle: `.claude/agents/security-auditor.md`.
 
 ## Architecture
 
