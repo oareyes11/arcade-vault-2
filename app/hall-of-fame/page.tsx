@@ -11,13 +11,13 @@ export default async function HallOfFame() {
     .order('created_at', { ascending: true });
 
   const typedGames = (games as GameRow[]) ?? [];
-  const firstGameId = typedGames[0]?.id ?? '';
+  const firstGameSlug = typedGames[0]?.slug ?? '';
 
-  const { data: initialScores } = firstGameId
+  const { data: initialScores } = firstGameSlug
     ? await supabase
         .from('scores')
         .select('*')
-        .eq('game_id', firstGameId)
+        .eq('game_id', firstGameSlug)
         .order('score', { ascending: false })
         .limit(12)
     : { data: [] };
@@ -26,7 +26,7 @@ export default async function HallOfFame() {
     <HallOfFameClient
       games={typedGames}
       initialScores={(initialScores as ScoreRow[]) ?? []}
-      initialTab={firstGameId}
+      initialTab={firstGameSlug}
     />
   );
 }

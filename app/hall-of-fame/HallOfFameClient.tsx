@@ -72,8 +72,8 @@ export default function HallOfFameClient({
         {games.map((g) => (
           <button
             key={g.id}
-            className={`chip${tab === g.id ? ' active' : ''}`}
-            onClick={() => changeTab(g.id)}
+            className={`chip${tab === g.slug ? ' active' : ''}`}
+            onClick={() => changeTab(g.slug)}
           >
             {g.title}
           </button>
