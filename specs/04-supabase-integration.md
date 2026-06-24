@@ -1,130 +1,132 @@
-# SPEC 04 — Integración de Supabase
+# Spec 04 — Supabase: configuración inicial y tablas base
 
-> **Estado:** Implementado
-> **Depende de:** 03-about-page-contact-resend ·
-> **Fecha:** 2026-05-14
-> **Objetivo:** Instalar y configurar el cliente de Supabase (browser + SSR) como
-> infraestructura base para specs futuros de autenticación, base de datos y realtime.
+- **Estado:** Aprbado
+- **Fecha:** 2026-06-24
+- **Dependencias:** ninguna
+- **Objetivo:** Conectar la app Next.js a un proyecto Supabase existente configurando las variables de entorno y creando las tablas `games` y `scores`.
 
 ---
 
 ## Scope
 
-**In:**
+### En alcance
 
-- Instalar `@supabase/supabase-js` y `@supabase/ssr`.
-- Crear `lib/supabase/client.ts` — cliente browser para componentes `"use client"`.
-- Crear `lib/supabase/server.ts` — cliente server para Server Components y Route Handlers.
-- Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a `.env.template`
-  y a `.env.local` como placeholders vacíos (el dev los completa manualmente).
+- Agregar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` a `.env.local`
+- Crear tabla `games` en Supabase con el esquema que coincide con `GameRow` en `lib/supabase/types.ts`
+- Crear tabla `scores` en Supabase con el esquema que coincide con `ScoreRow`, con FK a `games.id`
+- Verificar que la conexión funciona desde la app (lectura básica)
 
-**Fuera de alcance:**
+### Fuera de alcance
 
-- Creación de tablas o esquema en Supabase.
-- Conectar el `/auth` existente con Supabase Auth.
-- Cualquier uso real del cliente en componentes o páginas existentes.
-- Realtime, Edge Functions y Storage — quedan para specs futuros.
-- `SUPABASE_SERVICE_ROLE_KEY` — se añadirá cuando un spec lo requiera.
+- Autenticación de usuarios (spec futuro)
+- Row Level Security / políticas de acceso (spec futuro)
+- Poblar la tabla `games` con datos (se hace manualmente desde el dashboard de Supabase)
+- UI de administración de juegos
 
 ---
 
-## Data model
+## Modelo de datos
 
-No se introduce ningún modelo de datos persistente en este spec. Los clientes de Supabase
-son utilidades de configuración, no estructuras de datos.
+### Tabla `games`
 
----
+| Columna      | Tipo          | Restricciones                                          |
+| ------------ | ------------- | ------------------------------------------------------ |
+| `id`         | `uuid`        | PK, default `gen_random_uuid()`                        |
+| `title`      | `text`        | NOT NULL                                               |
+| `short`      | `text`        | NOT NULL — descripción corta                           |
+| `long`       | `text`        | NOT NULL — descripción larga                           |
+| `cat`        | `text`        | NOT NULL, CHECK IN ('ARCADE', 'PUZZLE', 'SHOOTER')     |
+| `cover`      | `text`        | NOT NULL — URL o ruta del cover                        |
+| `color`      | `text`        | NOT NULL, CHECK IN ('cyan','magenta','yellow','green') |
+| `created_at` | `timestamptz` | default `now()`                                        |
 
-## Implementation plan
+### Tabla `scores`
 
-1. **Instalar dependencias** — `npm install @supabase/supabase-js @supabase/ssr`.
-   Verificación: ambos paquetes aparecen en `dependencies` de `package.json`.
+| Columna       | Tipo          | Restricciones                               |
+| ------------- | ------------- | ------------------------------------------- |
+| `id`          | `uuid`        | PK, default `gen_random_uuid()`             |
+| `game_id`     | `uuid`        | NOT NULL, FK → `games.id` ON DELETE CASCADE |
+| `player_name` | `text`        | NOT NULL                                    |
+| `score`       | `integer`     | NOT NULL                                    |
+| `user_id`     | `uuid`        | NULL — se vincula a auth en spec futuro     |
+| `created_at`  | `timestamptz` | default `now()`                             |
 
-2. **Añadir variables de entorno** — añadir a `.env.local` y a `.env.template`:
-
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=
-   ```
-
-   Verificación: ambos archivos contienen las dos claves (vacías en `.env.local`,
-   como placeholders documentados en `.env.template`).
-
-3. **Crear `lib/supabase/client.ts`** — cliente browser con `createBrowserClient`
-   de `@supabase/ssr`:
-
-   ```ts
-   import { createBrowserClient } from '@supabase/ssr';
-
-   export const createClient = () =>
-     createBrowserClient(
-       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-     );
-   ```
-
-   Verificación: el archivo existe y TypeScript no reporta errores.
-
-4. **Crear `lib/supabase/server.ts`** — cliente server con `createServerClient`
-   de `@supabase/ssr`, leyendo y escribiendo cookies vía `next/headers`:
-
-   ```ts
-   import { createServerClient } from '@supabase/ssr';
-   import { cookies } from 'next/headers';
-
-   export const createClient = async () => {
-     const cookieStore = await cookies();
-     return createServerClient(
-       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-       {
-         cookies: {
-           getAll: () => cookieStore.getAll(),
-           setAll: (cookiesToSet) => {
-             cookiesToSet.forEach(({ name, value, options }) =>
-               cookieStore.set(name, value, options),
-             );
-           },
-         },
-       },
-     );
-   };
-   ```
-
-   Verificación: el archivo existe y TypeScript no reporta errores.
-
-5. **Verificación final** — `npm run build` (o `npm run dev`) termina sin errores
-   de compilación ni de tipos relacionados con los nuevos archivos.
+Ambas tablas coinciden 1:1 con `GameRow` y `ScoreRow` en `lib/supabase/types.ts`.
 
 ---
 
-## Acceptance criteria
+## Plan de implementación
 
-- [ ] `@supabase/supabase-js` y `@supabase/ssr` aparecen en `dependencies` de `package.json`.
-- [ ] `.env.local` contiene `NEXT_PUBLIC_SUPABASE_URL=` y `NEXT_PUBLIC_SUPABASE_ANON_KEY=`.
-- [ ] `.env.template` contiene las mismas dos claves como placeholders documentados.
-- [ ] `lib/supabase/client.ts` existe y exporta `createClient` usando `createBrowserClient`.
-- [ ] `lib/supabase/server.ts` existe y exporta `createClient` async usando `createServerClient`.
-- [ ] `npm run build` completa sin errores de TypeScript relacionados con los nuevos archivos.
-- [ ] Ninguna página o componente existente se rompe tras la integración.
+1. **Obtener credenciales** — En el dashboard de Supabase → _Project Settings → Data API_, copiar `Project URL` y `Publishable (anon) key`.
+
+2. **Configurar `.env.local`** — Agregar las dos variables:
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=<Project URL>
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Publishable key>
+   ```
+
+   El cliente ya las consume en `lib/supabase/client.ts` y `lib/supabase/server.ts`.
+
+3. **Crear tabla `games`** — Ejecutar en el SQL Editor de Supabase:
+
+   ```sql
+   CREATE TABLE games (
+     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     title        text NOT NULL,
+     short        text NOT NULL,
+     long         text NOT NULL,
+     cat          text NOT NULL CHECK (cat IN ('ARCADE','PUZZLE','SHOOTER')),
+     cover        text NOT NULL,
+     color        text NOT NULL CHECK (color IN ('cyan','magenta','yellow','green')),
+     created_at   timestamptz DEFAULT now()
+   );
+   ```
+
+4. **Crear tabla `scores`** — Ejecutar en el SQL Editor de Supabase:
+
+   ```sql
+   CREATE TABLE scores (
+     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     game_id      uuid NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+     player_name  text NOT NULL,
+     score        integer NOT NULL,
+     user_id      uuid,
+     created_at   timestamptz DEFAULT now()
+   );
+   ```
+
+5. **Verificar conexión** — Desde la app en desarrollo (`npm run dev`), abrir `/hall-of-fame` o hacer una consulta simple en un Server Component y confirmar que no hay errores de conexión en consola.
 
 ---
 
-## Decisions
+## Criterios de aceptación
 
-- **Sí:** `@supabase/ssr` en lugar de instanciar `createClient` de `@supabase/supabase-js`
-  directamente. El paquete SSR maneja cookies y sesión correctamente en Next.js App Router;
-  usar el cliente básico requeriría refactorizar cuando llegue el spec de Auth.
+- [ ] `.env.local` contiene `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` con valores reales
+- [ ] La tabla `games` existe en Supabase con todas las columnas y restricciones del modelo de datos
+- [ ] La tabla `scores` existe en Supabase con todas las columnas y la FK a `games.id`
+- [ ] `npm run dev` arranca sin errores de entorno o de conexión a Supabase
+- [ ] Una consulta `SELECT * FROM games` ejecutada desde el SQL Editor de Supabase devuelve resultado (aunque esté vacía)
+- [ ] Una consulta `SELECT * FROM scores` ejecutada desde el SQL Editor de Supabase devuelve resultado (aunque esté vacía)
 
-- **Sí:** Dos archivos separados (`client.ts` y `server.ts`) en lugar de uno universal.
-  Next.js App Router tiene contextos de ejecución distintos (browser vs. server); un solo
-  cliente que intente cubrir ambos rompe en uno de los dos contextos.
+---
 
-- **No:** `SUPABASE_SERVICE_ROLE_KEY` en este spec. Solo se añade cuando un spec concreto
-  lo requiera; incluirla ahora sería infraestructura sin uso.
+## Decisiones tomadas y descartadas
 
-- **No:** Crear tablas o esquema en Supabase. El objetivo de este spec es únicamente la
-  plomería de conexión; el modelo de datos se define spec a spec según la funcionalidad.
+| Decisión                 | Elegida                    | Descartada              | Motivo                                                                          |
+| ------------------------ | -------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| Clave de Supabase a usar | `PUBLISHABLE_KEY` (anon)   | `SECRET_KEY`            | La app la usa en cliente y servidor; la secret key nunca va al browser          |
+| FK `scores.game_id`      | FK con `ON DELETE CASCADE` | Sin FK / FK sin cascade | Integridad referencial; al borrar un juego sus scores se borran automáticamente |
+| Autenticación            | Fuera de este spec         | Incluirla aquí          | Mantiene el spec enfocado y ejecutable en un solo paso                          |
+| RLS                      | Fuera de este spec         | Incluirla aquí          | Sin datos sensibles en este punto; se agrega en spec dedicado                   |
+| Seeding de `games`       | Manual desde dashboard     | Script o UI             | Fuera de alcance acordado; la tabla se puebla por separado                      |
 
-- **No:** Conectar `/auth` en este spec. La autenticación real merece su propio spec con
-  flujo, estados de error y redirecciones definidos explícitamente.
+---
+
+## Riesgos identificados
+
+- **Variables de entorno en producción** — `.env.local` no se sube a git ni a Vercel. Al deployar hay que configurar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` manualmente en el panel del host.
+
+- **Nombre de la variable de la key** — Las versiones antiguas de `@supabase/ssr` usaban `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Este proyecto ya usa `PUBLISHABLE_KEY`; si se copia un snippet de la documentación antigua puede fallar silenciosamente.
+
+- **Inserción de scores con `game_id` inválido** — La FK rechazará inserciones si el juego no existe en la tabla `games`. Hay que asegurarse de poblar `games` antes de que la app intente escribir scores.
