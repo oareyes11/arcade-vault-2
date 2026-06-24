@@ -1,5 +1,6 @@
 export interface GameRow {
   id: string;
+  slug: string;
   title: string;
   short: string;
   long: string;
