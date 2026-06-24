@@ -203,7 +203,7 @@ function FeatureIcon({ kind }: { kind: string }) {
 
 function MiniCard({ game }: { game: GameRow }) {
   return (
-    <Link href={`/games/${game.id}`} className="mini-card">
+    <Link href={`/games/${game.slug}`} className="mini-card">
       <div className="mini-cover">
         <div className={`cover-bg ${game.cover}`} />
       </div>

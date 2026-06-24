@@ -12,7 +12,7 @@ export default async function GameDetail({
   const supabase = await createClient();
 
   const [{ data: game }, { data: scores }] = await Promise.all([
-    supabase.from('games').select('*').eq('id', id).single(),
+    supabase.from('games').select('*').eq('slug', id).single(),
     supabase
       .from('scores')
       .select('*')

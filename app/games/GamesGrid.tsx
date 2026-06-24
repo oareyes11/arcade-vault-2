@@ -36,7 +36,7 @@ function GameCard({ game }: { game: GameRow }) {
 
   return (
     <div ref={ref} className="card" onMouseMove={onMove} onMouseLeave={onLeave}>
-      <Link href={`/games/${game.id}`} className="cover">
+      <Link href={`/games/${game.slug}`} className="cover">
         <div className={`cover-bg ${game.cover}`} />
         <div className="label">{game.cat}</div>
       </Link>
@@ -45,7 +45,7 @@ function GameCard({ game }: { game: GameRow }) {
         <div className="desc">{game.short}</div>
         <div className="row">
           <Link
-            href={`/games/${game.id}`}
+            href={`/games/${game.slug}`}
             className={`btn ${btnColor}`}
             onClick={(e) => e.stopPropagation()}
           >
